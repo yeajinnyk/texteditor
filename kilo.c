@@ -1,47 +1,67 @@
+/*** includes ***/
+
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
 
-// global variables
+/*** data ***/
+
 struct termios orig_termios;
 
 
-// functions
+/*** terminal ***/
+
+void die(const char *s) { 	// error handling
+	perror(s);
+	exit(1);
+}
+
+
 void disableRawMode() {
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1) die("tcsetattr");
 }
 
 
 void enableRawMode() {
 
-	tcgetattr(STDIN_FILENO, &orig_termios); // read current attributes into a struct
+	if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr"); 	 // read current attributes into a struct
 	atexit(disableRawMode); // atexit causes disableRawMode() to be called automatically when program exits.
 
 	struct termios raw = orig_termios;
-	raw.c_lflag &= ~(ECHO | ICANON); // turn off canonical mode (read input byte by bite, not line by line)
+	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);			// disable ctrl s and ctrl q
+	raw.c_oflag &= ~(OPOST);			// turn off all outpost processing
+	raw.c_cflag |= (CS8);
+	raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG); // turn off canonical mode (read input byte by bite, not line by line)
+	raw.c_cc[VMIN] = 0;
+	raw.c_cc[VTIME] = 1;
 
-	raw.c_lflag &= ~(ECHO);
-
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 	// TCSAFLUSH specifies when to apply the change
 
 }  
 
 
+/*** init ***/
+
 int main() {
 
 	enableRawMode();
 
-	char c;
-	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+	while (1) {
+		char c = '\0';
+		if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
+
 		if (iscntrl(c)) {	// prints non control characters
-			printf("%d/n", c);
+			printf("%d\r\n", c);
 		}
 		else {
-			printf("%d ('%c')\n", c, c);
+			printf("%d ('%c')\r\n", c, c); // "\r\n" for a newline
 		}
+		
+		if (c == 'q') break; // quit 
 	}
 
 	return 0;

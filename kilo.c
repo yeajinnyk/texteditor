@@ -1,3 +1,5 @@
+#include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
@@ -18,6 +20,7 @@ void enableRawMode() {
 	atexit(disableRawMode); // atexit causes disableRawMode() to be called automatically when program exits.
 
 	struct termios raw = orig_termios;
+	raw.c_lflag &= ~(ECHO | ICANON); // turn off canonical mode (read input byte by bite, not line by line)
 
 	raw.c_lflag &= ~(ECHO);
 
@@ -32,7 +35,14 @@ int main() {
 	enableRawMode();
 
 	char c;
-	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q');
+	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+		if (iscntrl(c)) {	// prints non control characters
+			printf("%d/n", c);
+		}
+		else {
+			printf("%d ('%c')\n", c, c);
+		}
+	}
 
 	return 0;
 }

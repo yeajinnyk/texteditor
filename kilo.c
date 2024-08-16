@@ -66,10 +66,11 @@ char editorReadKey() {
 /*** output ***/
 
 void editorRefreshScreen() {
-	write(STDOUT_FILENO, "/x1b[2J", 4);		// the first byte  "\x1b" is the escape character (27 in decimal)
-							// other 3 bytes is "[2J"
+	write(STDOUT_FILENO, "\x1b[2J", 4);		// the first byte  "\x1b" is the escape character (27 in decimal)
+	write(STDOUT_FILENO, "\x1b[H", 3);										// other 3 bytes is "[2J"
 							// escape sequence always starts with escape character (27) followed by [.
 							// J command (Erase In Display) to clear screen. 2 says clear entire screen
+							// H command positions cursor
 }
 
 

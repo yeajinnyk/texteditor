@@ -7,12 +7,19 @@
 #include <termios.h>
 #include <unistd.h>
 
+
+/*** defines ***/
+
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+
 /*** data ***/
 
 struct termios orig_termios;
 
 
 /*** terminal ***/
+
 
 void die(const char *s) { 	// error handling
 	perror(s);
@@ -44,6 +51,32 @@ void enableRawMode() {
 }  
 
 
+// waits for one keypress and returns it.
+char editorReadKey() {
+	int nread;
+	char c;
+	while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+		if (nread == -1 && errno != EAGAIN) die("read");
+	}
+	
+	return c;
+}
+
+
+/*** input ***/
+
+// waits for a keypress and then handles it
+void editorProcessKeypress() {
+	char c = editorReadKey();
+
+	switch (c) {
+		case CTRL_KEY('q'):
+			exit(0);
+			break;
+	}
+}
+
+
 /*** init ***/
 
 int main() {
@@ -51,17 +84,7 @@ int main() {
 	enableRawMode();
 
 	while (1) {
-		char c = '\0';
-		if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
-
-		if (iscntrl(c)) {	// prints non control characters
-			printf("%d\r\n", c);
-		}
-		else {
-			printf("%d ('%c')\r\n", c, c); // "\r\n" for a newline
-		}
-		
-		if (c == 'q') break; // quit 
+		editorProcessKeypress();
 	}
 
 	return 0;

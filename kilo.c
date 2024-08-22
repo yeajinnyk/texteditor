@@ -15,7 +15,11 @@
 
 /*** data ***/
 
-struct termios orig_termios;
+struct editorConfig {
+	struct termios orig_termios;
+};
+
+struct editorConfig E;
 
 
 /*** terminal ***/
@@ -31,16 +35,16 @@ void die(const char *s) { 	// error handling
 
 
 void disableRawMode() {
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1) die("tcsetattr");
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1) die("tcsetattr");
 }
 
 
 void enableRawMode() {
 
-	if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr"); 	 // read current attributes into a struct
+	if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr"); 	 // read current attributes into a struct
 	atexit(disableRawMode); // atexit causes disableRawMode() to be called automatically when program exits.
 
-	struct termios raw = orig_termios;
+	struct termios raw = E.orig_termios;
 	raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);			// disable ctrl s and ctrl q
 	raw.c_oflag &= ~(OPOST);			// turn off all outpost processing
 	raw.c_cflag |= (CS8);

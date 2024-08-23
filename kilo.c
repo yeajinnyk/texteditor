@@ -19,6 +19,7 @@
 /*** data ***/
 
 struct editorConfig {
+	int cx, cy; 	// E.cx is the horizontal coord of the cursor (col) and E.cy is the vertical coord of the cursor (row)
 	int screenrows;
 	int screencols;
 
@@ -181,7 +182,10 @@ void editorRefreshScreen() {
 							// H command positions cursor
 	editorDrawRows(&ab);
 
-	abAppend(&ab, "\x1b[H", 3);
+	char buf[32];
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+	abAppend(&ab, buf, strlen(buf));
+
 	abAppend(&ab, "\x1b[?25h", 6); // hiding and showing cursor
 	
 	write(STDOUT_FILENO, ab.b, ab.len);
@@ -191,6 +195,26 @@ void editorRefreshScreen() {
 
 
 /*** input ***/
+
+
+// use WASD to move the cursor
+void editorMoveCursor(char key) {
+	switch (key) {
+		case 'a':
+			E.cx--;
+			break;
+		case 'd':
+			E.cx++;
+			break;
+		case 'w':
+			E.cy--;
+			break;
+		case 's':
+			E.cy++;
+			break;
+	}
+}
+
 
 // waits for a keypress and then handles it
 void editorProcessKeypress() {
@@ -204,6 +228,13 @@ void editorProcessKeypress() {
 
 			exit(0);
 			break;
+		case 'w':
+		case 's':
+		case 'a':
+		case 'd':
+			editorMoveCursor(c);
+			break;
+
 	}
 }
 
@@ -211,6 +242,9 @@ void editorProcessKeypress() {
 /*** init ***/
 
 void initEditor() { 	// initializes all the fields in the E struct
+	E.cx = 0;
+	E.cy = 0;
+
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
 }
 

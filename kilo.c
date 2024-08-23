@@ -135,27 +135,33 @@ void abFree(struct abuf *ab) {
 
 /*** output ***/
 
-void editorDrawRows() {
+void editorDrawRows(struct abuf *ab) {
 	int y;
 	for (y = 0; y < E.screenrows; y++) {
-		write(STDOUT_FILENO, "~", 1);
+		abAppend(ab, "~", 1);
 
 		if (y < E.screenrows - 1) {
-			write(STDOUT_FILENO, "\r\n", 2);
+			abAppend(ab, "\r\n", 2);
 		}
 	}
 }
 
 
 void editorRefreshScreen() {
-	write(STDOUT_FILENO, "\x1b[2J", 4);		// the first byte  "\x1b" is the escape character (27 in decimal)
-	write(STDOUT_FILENO, "\x1b[H", 3);										// other 3 bytes is "[2J"
+
+	struct abuf ab = ABUF_INIT;
+
+	abAppend(&ab, "\x1b[2J", 4);		// the first byte  "\x1b" is the escape character (27 in decimal)
+	abAppend(&ab, "\x1b[H", 3);										// other 3 bytes is "[2J"
 							// escape sequence always starts with escape character (27) followed by [.
 							// J command (Erase In Display) to clear screen. 2 says clear entire screen
 							// H command positions cursor
-	editorDrawRows();
+	editorDrawRows(&ab);
 
-	write(STDOUT_FILENO, "\x1b[H", 3);
+	abAppend(&ab, "\x1b[H", 3);
+	
+	write(STDOUT_FILENO, ab.b, ab.len);
+	abFree(&ab);
 
 }
 

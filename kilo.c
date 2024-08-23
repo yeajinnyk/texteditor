@@ -151,6 +151,7 @@ void editorRefreshScreen() {
 
 	struct abuf ab = ABUF_INIT;
 
+	abAppend(&ab, "\x1b[?25l", 6);
 	abAppend(&ab, "\x1b[2J", 4);		// the first byte  "\x1b" is the escape character (27 in decimal)
 	abAppend(&ab, "\x1b[H", 3);										// other 3 bytes is "[2J"
 							// escape sequence always starts with escape character (27) followed by [.
@@ -159,6 +160,7 @@ void editorRefreshScreen() {
 	editorDrawRows(&ab);
 
 	abAppend(&ab, "\x1b[H", 3);
+	abAppend(&ab, "\x1b[?25h", 6); // hiding and showing cursor
 	
 	write(STDOUT_FILENO, ab.b, ab.len);
 	abFree(&ab);

@@ -17,11 +17,13 @@
 #define KILO_VERSION "0.0.1"
 
 enum editorKey {
-	ARROW_LEFT = 'a',
-	ARROW_RIGHT = 'd',
-	ARROW_UP = 'w',
-	ARROW_DOWN = 's'
+	ARROW_LEFT = 1000,
+	ARROW_RIGHT,
+	ARROW_UP,
+	ARROW_DOWN
 };
+
+// the rest are automatically incremented as list goes on
 
 
 /*** data ***/
@@ -74,7 +76,7 @@ void enableRawMode() {
 
 
 // waits for one keypress and returns it.
-char editorReadKey() {
+int editorReadKey() {
 	int nread;
 	char c;
 	while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
@@ -226,19 +228,27 @@ void editorRefreshScreen() {
 
 
 // use WASD to move the cursor
-void editorMoveCursor(char key) {
+void editorMoveCursor(int key) {
 	switch (key) {
 		case ARROW_LEFT:
-			E.cx--;
+			if (E.cx != 0) {
+				E.cx--;
+			}
 			break;
 		case ARROW_RIGHT:
-			E.cx++;
+			if (E.cx != E.screencols - 1) {
+				E.cx++;
+			}
 			break;
 		case ARROW_UP:
-			E.cy--;
+			if (E.cy != 0) {
+				E.cy--;
+			}
 			break;
 		case ARROW_DOWN:
-			E.cy++;
+			if (E.cy != E.screenrows - 1) {
+				E.cy++;
+			}
 			break;
 	}
 }
@@ -246,7 +256,7 @@ void editorMoveCursor(char key) {
 
 // waits for a keypress and then handles it
 void editorProcessKeypress() {
-	char c = editorReadKey();
+	int c = editorReadKey();
 
 	switch (c) {
 		case CTRL_KEY('q'):

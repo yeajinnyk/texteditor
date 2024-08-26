@@ -46,6 +46,7 @@ typedef struct erow {		// "editor row". stores a line of text as a pointer to th
 
 struct editorConfig {
 	int cx, cy; 	// E.cx is the horizontal coord of the cursor (col) and E.cy is the vertical coord of the cursor (row)
+	int rowoff;	// keeps track of what row of the file the user is currently scrolled to
 	int screenrows;
 	int screencols;
 
@@ -392,6 +393,7 @@ void editorProcessKeypress() {
 void initEditor() { 	// initializes all the fields in the E struct
 	E.cx = 0;
 	E.cy = 0;
+	E.rowoff = 0;
 	E.numrows = 0;
 	E.row = NULL;
 

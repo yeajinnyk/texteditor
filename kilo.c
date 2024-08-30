@@ -59,6 +59,8 @@ struct editorConfig {
 	int numrows;
 	erow *row;
 
+	char *filename;	
+
 	struct termios orig_termios;
 };
 
@@ -256,7 +258,10 @@ void editorAppendRow(char *s, size_t len) {
 
 // takes a filename and opens the file
 void editorOpen(char *filename) {
-	
+	free(E.filename);
+	E.filename = strdup(filename);	
+
+
 	// open an actual file
 	FILE *fp = fopen(filename, "r");
 	if (!fp) die("fopen");
@@ -362,11 +367,25 @@ void editorDrawRows(struct abuf *ab) {
 		}
 
 		abAppend(ab, "\x1b[K", 3);
+		abAppend(ab, "\r\n", 2);
 
-		if (y < E.screenrows - 1) {
-			abAppend(ab, "\r\n", 2);
-		}
 	}
+}
+
+// displays a status bar 
+void editorDrawStatusBar(struct abuf *ab) {
+	abAppend(ab, "\x1b[7m", 4);
+	char status[80];
+
+	int len = snprintf(status, sizeof(status), "%.20s - %d lines", E.filename ? E.filename : "[No Name]", E.numrows);
+	if (len > E.screencols) len = E.screencols;
+	abAppend(ab, status, len);
+
+	while (len < E.screencols) {
+		abAppend(ab, " ", 1);
+		len++;
+	}
+	abAppend(ab, "\x1b[m", 3);
 }
 
 
@@ -382,6 +401,7 @@ void editorRefreshScreen() {
 							// J command (Erase In Display) to clear screen. 2 says clear entire screen
 							// H command positions cursor
 	editorDrawRows(&ab);
+	editorDrawStatusBar(&ab);
 
 	char buf[32];
 	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, (E.rx - E.coloff) +  1);
@@ -460,12 +480,21 @@ void editorProcessKeypress() {
 			break;
 
 		case END_KEY:
-			E.cx = E.screencols - 1;
+			if (E.cy < E.numrows) E.cx = E.row[E.cy].size;
+	
 			break;
 		
 		case PAGE_UP:
 		case PAGE_DOWN:
 			{
+				if (c == PAGE_UP) {
+					E.cy = E.rowoff;
+				}
+				else if (c == PAGE_DOWN) {
+					E.cy = E.rowoff + E.screenrows - 1;
+					if (E.cy > E.numrows) E.cy = E.numrows;
+				}
+
 				int times = E.screenrows;
 				while (times--) editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
 			}
@@ -492,8 +521,11 @@ void initEditor() { 	// initializes all the fields in the E struct
 	E.coloff = 0;
 	E.numrows = 0;
 	E.row = NULL;
+	E.filename = NULL;
 
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
+
+	E.screenrows -= 1;
 }
 
 int main(int argc, char *argv[]) {

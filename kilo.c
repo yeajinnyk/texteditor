@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -26,6 +27,7 @@
 
 
 enum editorKey {
+	BACKSPACE = 127,
 	ARROW_LEFT = 1000,
 	ARROW_RIGHT,
 	ARROW_UP,
@@ -258,8 +260,56 @@ void editorAppendRow(char *s, size_t len) {
 	E.numrows++;
 }
 
+// writes a single character into an erow at a given position
+void editorRowInsertChar(erow *row, int at, int c) {
+	if (at < 0 || at > row->size) at = row->size;
+	
+	row->chars = realloc(row->chars, row->size + 2);
+
+	memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+
+	row->size++;
+	row->chars[at] = c;
+	editorUpdateRow(row);
+}
+
+
+/*** editor operations ***/
+
+// inserts char into the position that the cursor is at
+void editorInsertChar(int c) {
+	if (E.cy == E.numrows) {
+		editorAppendRow("", 0);
+	}
+	editorRowInsertChar(&E.row[E.cy], E.cx, c);
+	E.cx++;
+}
+
 
 /*** file i/o ***/
+
+// converts array of erow structs into a single string that is ready to be written out to a file
+char *editorRowsToString(int *buflen) {
+	int totlen = 0;
+	int j;
+
+	for (j = 0; j < E.numrows; j++) {
+		totlen += E.row[j].size + 1;
+	}
+	*buflen = totlen;
+
+	char *buf = malloc(totlen);
+	char *p = buf;
+
+	for (j = 0; j < E.numrows; j++) {
+		memcpy(p, E.row[j].chars, E.row[j].size);
+		p += E.row[j].size;
+		*p = '\n';
+		p++;
+	}
+
+	return buf;
+}
 
 // takes a filename and opens the file
 void editorOpen(char *filename) {
@@ -284,6 +334,20 @@ void editorOpen(char *filename) {
 	fclose(fp);
 	
 } 
+
+void editorSave() {
+	if (E.filename == NULL) return;
+
+	int len;
+	char *buf = editorRowsToString(&len);
+
+	
+	int fd = open(E.filename, O_RDWR | O_CREAT, 0644);
+	ftruncate(fd, len);
+	write(fd, buf, len);
+	close(fd);
+	free(buf);
+}
 
 
 /*** append buffer ***/
@@ -501,12 +565,20 @@ void editorProcessKeypress() {
 	int c = editorReadKey();
 
 	switch (c) {
+		case '\r':		// ENTER key
+			/* TODO */
+			break;
+
 		case CTRL_KEY('q'):
 
 			write(STDOUT_FILENO, "\x1b[2J", 4);
 			write(STDOUT_FILENO, "\x1b[H", 3);		
 
 			exit(0);
+			break;
+		
+		case CTRL_KEY('s'):
+			editorSave();
 			break;
 
 		case HOME_KEY:
@@ -518,6 +590,12 @@ void editorProcessKeypress() {
 	
 			break;
 		
+		case BACKSPACE:
+		case CTRL_KEY('h'):
+		case DEL_KEY:
+			/* TODO */
+			break;
+
 		case PAGE_UP:
 		case PAGE_DOWN:
 			{
@@ -539,6 +617,15 @@ void editorProcessKeypress() {
 		case ARROW_LEFT:
 		case ARROW_RIGHT:
 			editorMoveCursor(c);
+			break;
+		
+		case CTRL_KEY('l'):
+		case '\x1b':
+			break;
+	
+
+		default:		// any keypress that isn't mapped to another editor function is inserted directly
+			editorInsertChar(c);
 			break;
 
 	}

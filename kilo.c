@@ -335,6 +335,16 @@ void editorOpen(char *filename) {
 	
 } 
 
+
+// takes in a format string and a variable number of arguments
+void editorSetStatusMessage(const char *fmt, ...) {
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(E.statusmsg, sizeof(E.statusmsg), fmt, ap);
+	va_end(ap);
+	E.statusmsg_time = time(NULL);
+}
+
 void editorSave() {
 	if (E.filename == NULL) return;
 
@@ -348,6 +358,9 @@ void editorSave() {
 			if (write(fd, buf, len) == len) {
 				close(fd);
 				free(buf);
+				
+				editorSetStatusMessage("%d bytes written to disk", len);
+
 				return;
 			}
 		}
@@ -355,6 +368,7 @@ void editorSave() {
 	}
 
 	free(buf);
+	editorSetStatusMessage("Can't save! I/O error: %s", strerror(errno));
 }
 
 
@@ -511,6 +525,7 @@ void editorRefreshScreen() {
 
 }
 
+/*
 // takes in a format string and a variable number of arguments
 void editorSetStatusMessage(const char *fmt, ...) {
 	va_list ap;
@@ -519,6 +534,7 @@ void editorSetStatusMessage(const char *fmt, ...) {
 	va_end(ap);
 	E.statusmsg_time = time(NULL);
 }
+*/
 
 
 /*** input ***/
@@ -669,7 +685,7 @@ int main(int argc, char *argv[]) {
 		editorOpen(argv[1]);
 	}
 
-	editorSetStatusMessage("HELP: Ctrl-Q = quit");
+	editorSetStatusMessage("HELP: Ctrl-S = save | Ctrl-Q = quit");
 
 	while (1) {
 		editorRefreshScreen();
